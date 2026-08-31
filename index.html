@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Clientes - Prototipo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=nopag">
+</head>
+<body>
+
+<div class="card" id="appCard">
+  <!-- HEADER (ORIGINAL INTACTO) -->
+  <div class="card-header">
+    <div class="header-left">
+      <h1>Registro y Gestión de Clientes</h1>
+      <p>Panel centralizado · Interfaz corporativa minimalista</p>
+    </div>
+    <div class="cliente-badge">
+      <label for="numCliente"># Cliente</label>
+      <input type="text" id="numCliente" placeholder="0001" maxlength="10" inputmode="numeric">
+    </div>
+  </div>
+
+  <!-- BODY ORIGINAL INTACTO -->
+  <div class="card-body" id="cardBodyOriginal">
+    <!-- FORM LEFT -->
+    <div class="form-panel">
+      <h2>Datos del Cliente</h2>
+      <form id="clienteForm" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="tipoCliente">Tipo ID <span>*</span></label>
+            <select id="tipoCliente" required>
+              <option value="" disabled selected>Seleccione...</option>
+              <option value="CC">CC - Cédula de Ciudadanía</option>
+              <option value="CE">CE - Cédula de Extranjería</option>
+              <option value="TI">TI - Tarjeta de Identidad</option>
+              <option value="PA">Pasaporte</option>
+              <option value="NIT">NIT - Número Tributario</option>
+              <option value="PEP">PEP - Permiso Especial</option>
+              <option value="PPT">PPT - Permiso Protección Temporal</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="identificacion">Identificación <span>*</span></label>
+            <div class="input-wrap">
+              <input type="text" id="identificacion" placeholder="Ej: 0123456789" maxlength="10" inputmode="numeric" autocomplete="off" required>
+            </div>
+            <span class="error-msg" id="errorIdentificacion">Debe contener exactamente 10 dígitos numéricos</span>
+            <span class="hint" id="hintIdentificacion">Solo números · 10 caracteres exactos</span>
+          </div>
+          <div class="field">
+            <label for="nombre">Nombre <span>*</span></label>
+            <input type="text" id="nombre" placeholder="Nombres" required>
+          </div>
+          <div class="field">
+            <label for="apellido">Apellido <span>*</span></label>
+            <input type="text" id="apellido" placeholder="Apellidos" required>
+          </div>
+          <div class="field full">
+            <label for="direccion">Dirección</label>
+            <input type="text" id="direccion" placeholder="Calle principal, número, referencia...">
+          </div>
+          <div class="field">
+            <label for="telefono"># Teléfono</label>
+            <input type="tel" id="telefono" placeholder="Ej: 0991234567" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="pais">País</label>
+            <select id="pais">
+              <option value="" disabled selected>Seleccione país...</option>
+              <option>Ecuador</option>
+              <option>Colombia</option>
+              <option>Perú</option>
+              <option>Chile</option>
+              <option>México</option>
+              <option>España</option>
+              <option>Argentina</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label>eMail <span>*</span></label>
+            <div class="email-list" id="emailList">
+              <div class="email-row">
+                <input type="email" class="email-input" placeholder="correo@ejemplo.com" required>
+                <button type="button" class="btn-add-email" id="btnAddEmail" title="Agregar otro correo">+ Agregar</button>
+              </div>
+            </div>
+            <span class="hint">Puedes registrar múltiples correos con el botón + Agregar</span>
+          </div>
+        </div>
+      </form>
+    </div>
+    <!-- ACTIONS RIGHT ORIGINAL -->
+    <div class="actions-panel">
+      <h2>Acciones Rápidas</h2>
+      <div class="btn-grid" id="btnGrid">
+        <button class="btn-action primary" data-action="buscar"><span class="icon">🔍</span>Buscar Cliente</button>
+        <button class="btn-action" data-action="actualizar"><span class="icon">↻</span>Actualizar Cliente</button>
+        <button class="btn-action" data-action="limpiar"><span class="icon">🧹</span>Limpiar Campos</button>
+        <button class="btn-action accent" data-action="crear"><span class="icon">＋</span>Crear Cliente</button>
+        <button class="btn-action danger" data-action="borrar"><span class="icon">🗑</span>Delete</button>        <button class="btn-action" data-action="guardar"><span class="icon">💾</span>Guardar</button>
+        <button class="btn-action" data-action="salir"><span class="icon">⎋</span>Salir</button>
+      </div>
+      <button class="btn-zoom" id="btnZoom">⤢ Zoom Pantalla</button>
+    </div>
+  </div>
+  <!-- FOOTER ORIGINAL -->
+  <div class="card-footer" id="cardFooter">
+    <div class="pagination">
+      <button class="pag-btn" id="prevBtn" title="Anterior">&lt;</button>
+      <button class="pag-btn" id="nextBtn" title="Siguiente">&gt;</button>
+      <label class="check-wrap"><input type="checkbox" id="selectAll"> Seleccionar todo</label>
+    </div>
+    <div class="counter"># Clientes: <strong id="clientCount">0</strong> <span style="opacity:.6;font-weight:400">· Página <span id="pageNum">1</span></span></div>
+  </div>
+
+  <!-- ===== VISTAS NUEVAS (AÑADIDAS, NO MODIFICAN LO ORIGINAL) ===== -->
+  <div id="vistaBuscar" class="vista hidden">
+    <div class="vista-header">
+      <div>
+        <h3>🔍 Buscar Cliente</h3>
+        <p>Cuadros de búsqueda inteligentes · Filtra por identificación, nombre o correo</p>
+      </div>
+      <button class="btn-volver" onclick="showVista('form')">← Volver al formulario</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre, apellido o identificación...">
+      <select id="filterPais">
+        <option value="">Todos los países</option>
+        <option>Ecuador</option>
+        <option>Colombia</option>
+        <option>Perú</option>
+        <option>Chile</option>
+        <option>México</option>
+        <option>España</option>
+        <option>Argentina</option>
+      </select>
+      <select id="filterEstado"><option value="activo">✓ Activos</option><option value="suspendido">⊘ Suspendidos</option><option value="todos">Todos</option></select>
+      <select id="filterTipo">
+        <option value="">Todos los tipos</option>
+        <option value="CC">CC</option>
+        <option value="CE">CE</option>
+        <option value="TI">TI</option>
+        <option value="PA">Pasaporte</option>
+        <option value="NIT">NIT</option>
+        <option value="PEP">PEP</option>
+        <option value="PPT">PPT</option>
+        <option value="Otro">Otro</option>
+      </select>
+      <button id="btnBuscarAhora">Buscar</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Identificación</th>
+            <th>Tipo</th>
+            <th>Teléfono</th>
+            <th>País</th>
+            <th>Correos</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyBuscar"></tbody>
+      </table>
+    </div>
+    <div class="vista-footer">
+      <span id="buscarInfo">0 resultados</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="pag-btn" id="buscarPrev">&lt;</button>
+        <span>Pág <strong id="buscarPage">1</strong></span>
+        <button class="pag-btn" id="buscarNext">&gt;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="vistaActualizar" class="vista hidden">
+    <div class="vista-header">
+      <div>
+        <h3>↻ Actualizar Cliente</h3>
+        <p>Selecciona un cliente y edita sus datos directamente — los cambios se guardan en el formulario</p>
+      </div>
+      <button class="btn-volver" onclick="showVista('form')">← Volver</button>
+    </div>
+    <!-- bannerEdicion eliminado por flujo simplificado -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Identificación</th>
+            <th>Dirección</th>
+            <th>País</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyActualizar"></tbody>
+      </table>
+    </div>
+    <div class="vista-footer">
+      <span id="actualizarInfo">0 clientes</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="pag-btn" id="actualizarPrev">&lt;</button>
+        <span>Pág <strong id="actualizarPage">1</strong></span>
+        <button class="pag-btn" id="actualizarNext">&gt;</button>
+      </div>
+    </div>
+  </div>
+<!-- TECLADO NATIVO WINDOWS: se usa el del sistema (osk.exe) -->
+  <!-- TECLADO VIRTUAL LIBRE AUTO-SHOW -->
+  <div class="keyboard-wrapper hidden" id="keyboardWrapper">
+    <div class="keyboard-header">
+      <span>Teclado en pantalla</span>
+      <button type="button" id="btnCerrarTeclado">Cerrar ✕</button>
+    </div>
+    <div class="keyboard" id="keyboard"></div>
+  </div>
+<!-- MODAL -->
+<div id="modalOverlay" class="modal-overlay hidden">
+  <div class="modal" id="modalBox">
+    <h4 id="modalTitle">Confirmar</h4>
+    <p id="modalText">¿Estás seguro?</p>
+    <div class="modal-actions">
+      <button class="btn-modal secondary" id="modalCancel">Cancelar</button>
+      <button class="btn-modal danger" id="modalConfirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script type="module" src="js/app.js?v=inline3"></script>
+</body>
+</html>

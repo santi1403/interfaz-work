@@ -73,3 +73,12 @@ FROM clientes c LEFT JOIN cliente_emails e ON e.cliente_id=c.id GROUP BY c.id;
 
 -- Migración check_id (ejecuta una vez si ya tienes la BD creada):
 -- ALTER TABLE clientes ADD COLUMN check_id VARCHAR(32) NULL COMMENT 'Factura/check externo' AFTER estado;
+
+-- Tabla intermedia factura_cliente (1 cliente -> N checks/facturas, para tu amigo)
+CREATE TABLE IF NOT EXISTS factura_cliente (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  check_id VARCHAR(50) UNIQUE NOT NULL,
+  usuario_id INT NOT NULL,
+  fecha_vinculacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES clientes(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

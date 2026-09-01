@@ -72,6 +72,18 @@ function getClientesConEmails($pdo, $estadoFiltro='todos') {
         $st = $pdo->prepare("SELECT email FROM cliente_emails WHERE cliente_id=?");
         $st->execute([$c['id']]);
         $c['emails'] = array_column($st->fetchAll(), 'email');
+        // Tabla intermedia factura_cliente (usuario_id -> check_id)
+        try {
+            $st2 = $pdo->prepare("SELECT check_id, fecha_vinculacion FROM factura_cliente WHERE usuario_id=? ORDER BY fecha_vinculacion DESC");
+            $st2->execute([$c['id']]);
+            $c['facturas'] = $st2->fetchAll();
+            $c['check_ids'] = array_column($c['facturas'], 'check_id');
+            // compat: primer check_id para tu campo check_id en clientes
+            if (!empty($c['facturas'][0]['check_id'])) $c['check_id'] = $c['facturas'][0]['check_id'];
+        } catch (PDOException $e) {
+            $c['facturas'] = [];
+            $c['check_ids'] = [];
+        }
         $c['numCliente'] = $c['num_cliente'];
         $c['tipoCliente'] = $c['tipo_id'];
         $c['fechaDesde'] = $c['fecha_desde'];
@@ -198,6 +210,27 @@ if ($method === 'PATCH') {
     if (!$id) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'Falta id']); exit; }
     $pdo->prepare("UPDATE clientes SET estado='activo' WHERE id=?")->execute([$id]);
     echo json_encode(['ok'=>true,'msg'=>'Cliente reactivado']);
+    exit;
+}
+// POST vincular factura_cliente (para tu amigo)
+if ($method === 'POST' && ($action==='vincular' || $action==='factura')) {
+    $checkId = trim($input['check_id'] ?? $input['checkId'] ?? '');
+    $usuarioId = $input['usuario_id'] ?? $input['usuarioId'] ?? $input['cliente_id'] ?? null;
+    if (!$checkId || !$usuarioId) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'Falta check_id y usuario_id']); exit; }
+    try {
+        $pdo->prepare("INSERT INTO factura_cliente (check_id, usuario_id) VALUES (?,?)")->execute([$checkId, $usuarioId]);
+        echo json_encode(['ok'=>true,'msg'=>'Factura vinculada']);
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(),'Duplicate')) { http_response_code(409); echo json_encode(['ok'=>false,'error'=>'check_id ya existe']); }
+        else { http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()]); }
+    }
+    exit;
+}
+// GET facturas de un cliente
+if ($method === 'GET' && $action==='facturas' && isset($_GET['usuario_id'])) {
+    $st=$pdo->prepare("SELECT * FROM factura_cliente WHERE usuario_id=? ORDER BY fecha_vinculacion DESC");
+    $st->execute([$_GET['usuario_id']]);
+    echo json_encode(['ok'=>true,'data'=>$st->fetchAll()]);
     exit;
 }
 

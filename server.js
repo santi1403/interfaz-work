@@ -55,8 +55,15 @@ async function handleApi(req,res,parsed){
 
       if(req.method==='GET' && (action==='list' || action==='')){
         const estado=(parsed.query.estado||'todos'); let sql='SELECT * FROM clientes'; let params=[]; if(estado==='activo'||estado==='suspendido'){ sql+=' WHERE estado=?'; params.push(estado); } sql+=' ORDER BY id DESC'; const [rows]=await pool.query(sql,params);
-        for(let c of rows){ const [em]=await pool.query('SELECT email FROM cliente_emails WHERE cliente_id=?',[c.id]); c.emails=em.map(x=>x.email); c.numCliente=c.num_cliente; c.tipoCliente=c.tipo_id; c.fechaDesde=c.fecha_desde; c.fechaNacimiento=c.fecha_nacimiento; c.estado=c.estado||'activo'; }
+        for(let c of rows){ const [em]=await pool.query('SELECT email FROM cliente_emails WHERE cliente_id=?',[c.id]); c.emails=em.map(x=>x.email); try{ const [fac]=await pool.query('SELECT check_id, fecha_vinculacion FROM factura_cliente WHERE usuario_id=? ORDER BY fecha_vinculacion DESC',[c.id]); c.facturas=fac; c.check_ids=fac.map(x=>x.check_id); if(fac[0]) c.check_id=fac[0].check_id; }catch(e){ c.facturas=[]; c.check_ids=[]; } c.numCliente=c.num_cliente; c.tipoCliente=c.tipo_id; c.fechaDesde=c.fecha_desde; c.fechaNacimiento=c.fecha_nacimiento; c.estado=c.estado||'activo'; }
         res.writeHead(200,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:true,data:rows}));
+      }
+      if(req.method==='GET' && action==='facturas'){
+        const uid=parsed.query.usuario_id; const [rows]=await pool.query('SELECT * FROM factura_cliente WHERE usuario_id=? ORDER BY fecha_vinculacion DESC',[uid]); res.writeHead(200,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:true,data:rows}));
+      }
+      if(req.method==='POST' && (action==='vincular' || action==='factura')){
+        const checkId=(input.check_id||input.checkId||'').toString().trim(); const usuarioId=input.usuario_id||input.usuarioId||input.cliente_id; if(!checkId||!usuarioId){ res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:false,error:'Falta check_id y usuario_id'})); }
+        try{ await pool.query('INSERT INTO factura_cliente (check_id, usuario_id) VALUES (?,?)',[checkId, usuarioId]); res.writeHead(200,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:true})); }catch(e){ res.writeHead(500,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:false,error:e.message})); }
       }
       if(req.method==='POST'){
         const d=input; const errN = validarDocumento(d.tipoCliente||'CC', d.identificacion||''); if(errN){ res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:false,error:errN})); }

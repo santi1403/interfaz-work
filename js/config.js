@@ -10,7 +10,11 @@ export const docConfig = {
   'Otro':{ label:'Otro', tipo:'alphanumeric', min:3, max:20 }
 };
 
-export const API_URL = 'api/api.php';
+export const API_URL = (() => {
+  // Si se abre como file:// (Visual Studio preview) usar la IP del servidor para que comparta la misma BD MySQL que las páginas http
+  if (location.protocol === 'file:') return 'http://192.168.10.111:8000/api/api.php';
+  return 'api/api.php';
+})();
 export const porPagina = 5;
 
 // Estado global (compartido)

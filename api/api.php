@@ -85,7 +85,25 @@ function getClientesConEmails($pdo, $estadoFiltro='todos') {
 if ($method === 'GET') {
     if ($action === 'list' || $action === '') {
         $estado = $_GET['estado'] ?? 'todos'; // activo, suspendido, todos
-        echo json_encode(['ok'=>true,'data'=>getClientesConEmails($pdo, $estado)]);
+        $data = getClientesConEmails($pdo, $estado);
+        // Si se abre en navegador (Accept: text/html) mostrar vista bonita, si es fetch/API devolver JSON
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        $isBrowser = strpos($accept, 'text/html') !== false;
+        $forceJson = isset($_GET['json']) || isset($_GET['format']) && $_GET['format']==='json';
+        if ($isBrowser && !$forceJson) {
+            header('Content-Type: text/html; charset=utf-8');
+            $rowsHtml = '';
+            foreach ($data as $c) {
+                $emails = htmlspecialchars(implode(', ', $c['emails'] ?? []));
+                $check = $c['check_id'] ? '<span class="badge" style="background:#fef3c7;border-color:#fde68a;color:#92400e">'.htmlspecialchars($c['check_id']).'</span>' : '<span style="color:#94a3b8">—</span>';
+                $estadoBadge = ($c['estado']??'activo')==='suspendido' ? '<span class="badge suspendido">Suspendido</span>' : '<span class="badge activo">Activo</span>';
+                $rowsHtml .= '<tr><td><strong>'.htmlspecialchars($c['num_cliente']??$c['numCliente']??'—').'</strong></td><td><strong>'.htmlspecialchars(($c['nombre']??'').' '.($c['apellido']??'')).'</strong><br><span style="font-size:11px;color:#64748b">'.htmlspecialchars($c['direccion']??'—').'</span></td><td><span class="badge">'.htmlspecialchars($c['identificacion']??'—').'</span></td><td><span class="badge">'.htmlspecialchars($c['tipo_id']??$c['tipoCliente']??'—').'</span></td><td>'.htmlspecialchars($c['telefono']??'—').'</td><td>'.htmlspecialchars($c['pais']??'—').'</td><td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'.$emails.'">'.$emails.'</td><td>'.$check.'</td><td>'.$estadoBadge.'</td></tr>';
+            }
+            if ($rowsHtml==='') $rowsHtml='<tr><td colspan="9"><div style="text-align:center;padding:36px;color:#64748b">Sin clientes</div></td></tr>';
+            echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Clientes - API</title><link rel="stylesheet" href="../css/styles.css"><style>.viewer-wrap{max-width:1280px;margin:0 auto}</style></head><body><div class="card viewer-wrap"><div class="card-header"><div class="header-left"><h1>Vista Clientes - Tiempo Real</h1><p>'.count($data).' clientes · '.htmlspecialchars($estado).' · <a href="?action=list&json=1" style="color:#93c5fd">Ver JSON</a></p></div><a href="../index.html" class="btn-volver" style="text-decoration:none">← Interfaz</a><a href="../viewer.html" class="btn-volver" style="text-decoration:none">Vista completa</a></div><div class="vista" style="display:block"><div class="table-wrap" style="max-height:75vh"><table><thead><tr><th>#</th><th>CLIENTE</th><th>IDENTIFICACIÓN</th><th>TIPO</th><th>TELÉFONO</th><th>PAÍS</th><th>CORREOS</th><th>CHECK_ID</th><th>ESTADO</th></tr></thead><tbody>'.$rowsHtml.'</tbody></table></div></div></div></body></html>';
+            exit;
+        }
+        echo json_encode(['ok'=>true,'data'=>$data]);
         exit;
     }
     if ($action === 'reactivar' && isset($_GET['id'])) {
@@ -117,8 +135,12 @@ if ($method === 'POST') {
         $num = $d['numCliente'] ?: str_pad((string)( $pdo->query("SELECT COUNT(*) FROM clientes")->fetchColumn() + 1 ), 4, '0', STR_PAD_LEFT);
         // Normalizar identificación a mayúsculas para Pasaporte/Otro
         $identNorm = in_array($d['tipoCliente'], ['PA','Otro']) ? strtoupper(trim(preg_replace('/[\s\.\-]/','',$d['identificacion']))) : $d['identificacion'];
-        $stmt = $pdo->prepare("INSERT INTO clientes (num_cliente,tipo_id,identificacion,nombre,apellido,direccion,telefono,pais,fecha_desde,fecha_nacimiento,estado) VALUES (?,?,?,?,?,?,?,?,?,?, 'activo')");
-        $stmt->execute([$num, $d['tipoCliente'], $identNorm, $d['nombre'], $d['apellido'], $d['direccion']?:null, $d['telefono']?:null, $d['pais']?:null, $d['fechaDesde']?:null, $d['fechaNacimiento']?:null]);
+        $checkId = trim($d['check_id'] ?? $d['checkId'] ?? '');
+        if($checkId==='') $checkId = null;
+        $stmt = $pdo->prepare("INSERT INTO clientes (num_cliente,tipo_id,identificacion,nombre,apellido,direccion,telefono,pais,fecha_desde,fecha_nacimiento,estado,check_id) VALUES (?,?,?,?,?,?,?,?,?,?, 'activo', ?)");
+        $fechaDesde = !empty($d['fechaDesde']) ? $d['fechaDesde'] : null;
+        $fechaNacimiento = !empty($d['fechaNacimiento']) ? $d['fechaNacimiento'] : null;
+        $stmt->execute([$num, $d['tipoCliente'], $identNorm, $d['nombre'], $d['apellido'], $d['direccion']?:null, $d['telefono']?:null, $d['pais']?:null, $fechaDesde, $fechaNacimiento, $checkId]);
         $id = $pdo->lastInsertId();
         foreach ($d['emails'] as $email) {
             $pdo->prepare("INSERT INTO cliente_emails (cliente_id,email) VALUES (?,?)")->execute([$id, $email]);
@@ -144,8 +166,12 @@ if ($method === 'PUT') {
         $pdo->beginTransaction();
         $estado = $d['estado'] ?? 'activo';
         $identUpd = in_array($d['tipoCliente'], ['PA','Otro']) ? strtoupper(trim(preg_replace('/[\s\.\-]/','',$d['identificacion']))) : $d['identificacion'];
-        $stmt = $pdo->prepare("UPDATE clientes SET num_cliente=?,tipo_id=?,identificacion=?,nombre=?,apellido=?,direccion=?,telefono=?,pais=?,fecha_desde=?,fecha_nacimiento=?,estado=? WHERE id=?");
-        $stmt->execute([$d['numCliente'], $d['tipoCliente'], $identUpd, $d['nombre'], $d['apellido'], $d['direccion'], $d['telefono'], $d['pais'], $d['fechaDesde'], $d['fechaNacimiento'], $estado, $id]);
+        $fechaDesde = !empty($d['fechaDesde']) ? $d['fechaDesde'] : null;
+        $fechaNacimiento = !empty($d['fechaNacimiento']) ? $d['fechaNacimiento'] : null;
+        $checkId = trim($d['check_id'] ?? $d['checkId'] ?? '');
+        if($checkId==='') $checkId = null;
+        $stmt = $pdo->prepare("UPDATE clientes SET num_cliente=?,tipo_id=?,identificacion=?,nombre=?,apellido=?,direccion=?,telefono=?,pais=?,fecha_desde=?,fecha_nacimiento=?,estado=?,check_id=? WHERE id=?");
+        $stmt->execute([$d['numCliente'], $d['tipoCliente'], $identUpd, $d['nombre'], $d['apellido'], $d['direccion'], $d['telefono'], $d['pais'], $fechaDesde, $fechaNacimiento, $estado, $checkId, $id]);
         $pdo->prepare("DELETE FROM cliente_emails WHERE cliente_id=?")->execute([$id]);
         foreach ($d['emails'] as $email) $pdo->prepare("INSERT INTO cliente_emails (cliente_id,email) VALUES (?,?)")->execute([$id,$email]);
         $pdo->commit();

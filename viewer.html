@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vista Clientes - API</title>
+<link rel="stylesheet" href="css/styles.css?v=viewer">
+<style>
+.viewer-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.viewer-header h2{font-size:15px;font-weight:900;color:#0f172a}
+.viewer-header p{font-size:12px;color:#64748b}
+.badge-check{background:#fef3c7;border-color:#fde68a;color:#92400e}
+</style>
+</head>
+<body>
+<div class="card" style="max-width:1280px">
+  <div class="card-header">
+    <div class="header-left">
+      <h1>Vista Clientes - Datos en Tiempo Real</h1>
+      <p>Fuente: /api/api.php?action=list · Solo lectura · No modifica tu interfaz</p>
+    </div>
+    <a href="index.html" class="btn-volver" style="text-decoration:none">← Volver a interfaz</a>
+  </div>
+  <div class="vista" style="display:block">
+    <div class="viewer-header" style="margin-bottom:12px">
+      <div>
+        <h2>Clientes registrados</h2>
+        <p id="viewerInfo">Cargando...</p>
+      </div>
+      <button class="btn-volver" onclick="cargar()">↻ Actualizar</button>
+    </div>
+    <div class="table-wrap" style="max-height:70vh">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>CLIENTE</th><th>IDENTIFICACIÓN</th><th>TIPO</th><th>TELÉFONO</th><th>PAÍS</th><th>CORREOS</th><th>CHECK_ID</th><th>ESTADO</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyViewer">
+          <tr><td colspan="9"><div class="empty-state"><div class="big">⏳</div>Cargando datos...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+async function cargar(){
+  const info=document.getElementById('viewerInfo');
+  const tbody=document.getElementById('tbodyViewer');
+  try{
+    const r=await fetch('api/api.php?action=list');
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'Error API');
+    const data=j.data||[];
+    info.textContent=`${data.length} clientes · actualizado ${new Date().toLocaleTimeString()}`;
+    if(data.length===0){
+      tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="big">📋</div>Sin clientes</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML=data.map(c=>`
+      <tr>
+        <td><strong>${c.num_cliente||c.numCliente||'—'}</strong></td>
+        <td><strong>${c.nombre||''} ${c.apellido||''}</strong><br><span style="font-size:11px;color:#64748b">${c.direccion||'—'}</span></td>
+        <td><span class="badge">${c.identificacion||'—'}</span></td>
+        <td><span class="badge">${c.tipo_id||c.tipoCliente||'—'}</span></td>
+        <td>${c.telefono||'—'}</td>
+        <td>${c.pais||'—'}</td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${(c.emails||[]).join(', ')}">${(c.emails||[]).join(', ')||'—'}</td>
+        <td>${c.check_id ? `<span class="badge badge-check">${c.check_id}</span>` : '<span style="color:#94a3b8">—</span>'}</td>
+        <td><span class="badge ${c.estado==='suspendido'?'suspendido':'activo'}">${c.estado||'activo'}</span></td>
+      </tr>
+    `).join('');
+  }catch(e){
+    info.textContent='Error al cargar';
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="big">⚠️</div>${e.message}<br>Verifica que MySQL y el servidor PHP estén activos</div></td></tr>`;
+  }
+}
+cargar();
+</script>
+</body>
+</html>

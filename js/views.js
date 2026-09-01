@@ -100,9 +100,9 @@ function renderActualizar(){
 }
 
 function editarCliente(id){
-  const c = (window._estado?.clientes || []).find(x => x.id === id);
-  if(!c) return;
-  window._estado.editandoId = id;
+  const c = (window._estado?.clientes || []).find(x => String(x.id) === String(id));
+  if(!c){ window.toast?.('No se encontró el cliente', 'error'); return; }
+  window._estado.editandoId = c.id;
   if(window.cargarEnFormulario) window.cargarEnFormulario(c);
   if(window.showVista) window.showVista('form');
   const btnG = document.querySelector('[data-action="guardar"]');
@@ -111,8 +111,8 @@ function editarCliente(id){
 }
 
 function eliminarCliente(id){
-  const c = (window._estado?.clientes || []).find(x => x.id === id);
-  if(!c) return;
+  const c = (window._estado?.clientes || []).find(x => String(x.id) === String(id));
+  if(!c){ window.toast?.('No se encontró el cliente', 'error'); return; }
   if(!confirm(`¿Eliminar a ${c.nombre} ${c.apellido} (${c.identificacion})?`)) return;
   fetch(`/api/api.php?id=${id}`, {method:'DELETE'})
     .then(r=>r.json())
@@ -122,5 +122,9 @@ function eliminarCliente(id){
     })
     .catch(()=>alert('Error de conexión'));
 }
+
+// Exponer a window para acceso global y debug
+window.editarCliente = editarCliente;
+window.eliminarCliente = eliminarCliente;
 
 export { showVista, renderBuscar, renderActualizar };

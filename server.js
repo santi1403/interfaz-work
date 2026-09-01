@@ -61,14 +61,16 @@ async function handleApi(req,res,parsed){
       if(req.method==='POST'){
         const d=input; const errN = validarDocumento(d.tipoCliente||'CC', d.identificacion||''); if(errN){ res.writeHead(400,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:false,error:errN})); }
         const identNorm = (['PA','Otro'].includes(d.tipoCliente) ? String(d.identificacion||'').replace(/[\s\.\-]/g,'').toUpperCase() : d.identificacion);
+        const checkId = (d.check_id || d.checkId || '').toString().trim() || null;
         const num=d.numCliente||String((await pool.query('SELECT COUNT(*) as c FROM clientes'))[0][0].c+1).padStart(4,'0');
-        const [r]=await pool.query("INSERT INTO clientes (num_cliente,tipo_id,identificacion,nombre,apellido,direccion,telefono,pais,fecha_desde,fecha_nacimiento,estado) VALUES (?,?,?,?,?,?,?,?,?,?,'activo')",[num,d.tipoCliente,identNorm,d.nombre,d.apellido,d.direccion||null,d.telefono||null,d.pais||null,d.fechaDesde||null,d.fechaNacimiento||null]);
+        const [r]=await pool.query("INSERT INTO clientes (num_cliente,tipo_id,identificacion,nombre,apellido,direccion,telefono,pais,fecha_desde,fecha_nacimiento,estado,check_id) VALUES (?,?,?,?,?,?,?,?,?,?, 'activo', ?)",[num,d.tipoCliente,identNorm,d.nombre,d.apellido,d.direccion||null,d.telefono||null,d.pais||null,d.fechaDesde||null,d.fechaNacimiento||null,checkId]);
         for(let e of d.emails||[]) await pool.query('INSERT INTO cliente_emails (cliente_id,email) VALUES (?,?)',[r.insertId,e]);
         res.writeHead(200,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:true,id:r.insertId,numCliente:num}));
       }
       if(req.method==='PUT'){
         const id=parsed.query.id||input.id; const d=input;
-        const estadoUpd=d.estado||'activo'; const identUpd=(['PA','Otro'].includes(d.tipoCliente)?String(d.identificacion||'').replace(/[\s\.\-]/g,'').toUpperCase():d.identificacion); await pool.query('UPDATE clientes SET num_cliente=?,tipo_id=?,identificacion=?,nombre=?,apellido=?,direccion=?,telefono=?,pais=?,fecha_desde=?,fecha_nacimiento=?,estado=? WHERE id=?',[d.numCliente,d.tipoCliente,identUpd,d.nombre,d.apellido,d.direccion,d.telefono,d.pais,d.fechaDesde,d.fechaNacimiento,estadoUpd,id]);
+        const checkId = (d.check_id || d.checkId || '').toString().trim() || null;
+        const estadoUpd=d.estado||'activo'; const identUpd=(['PA','Otro'].includes(d.tipoCliente)?String(d.identificacion||'').replace(/[\s\.\-]/g,'').toUpperCase():d.identificacion); await pool.query('UPDATE clientes SET num_cliente=?,tipo_id=?,identificacion=?,nombre=?,apellido=?,direccion=?,telefono=?,pais=?,fecha_desde=?,fecha_nacimiento=?,estado=?,check_id=? WHERE id=?',[d.numCliente,d.tipoCliente,identUpd,d.nombre,d.apellido,d.direccion,d.telefono,d.pais,d.fechaDesde,d.fechaNacimiento,estadoUpd,checkId,id]);
         await pool.query('DELETE FROM cliente_emails WHERE cliente_id=?',[id]);
         for(let e of d.emails||[]) await pool.query('INSERT INTO cliente_emails (cliente_id,email) VALUES (?,?)',[id,e]);
         res.writeHead(200,{'Content-Type':'application/json'}); return res.end(JSON.stringify({ok:true}));

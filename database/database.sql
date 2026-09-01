@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS clientes (
   fecha_desde DATE NULL,
   fecha_nacimiento DATE NULL,
   estado ENUM('activo','suspendido') NOT NULL DEFAULT 'activo' COMMENT 'Borrado lógico - buenas prácticas',
+  check_id VARCHAR(32) NULL COMMENT 'Factura/check externo - uso amigo API (ej HPL000019389)',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_identificacion (identificacion),
@@ -69,3 +70,6 @@ FROM clientes c LEFT JOIN cliente_emails e ON e.cliente_id=c.id GROUP BY c.id;
 -- ALTER TABLE clientes MODIFY COLUMN identificacion VARCHAR(20);
 -- ALTER TABLE clientes DROP CHECK chk_identificacion_10;
 -- ALTER TABLE clientes ADD CONSTRAINT chk_identificacion_len CHECK (CHAR_LENGTH(identificacion) BETWEEN 3 AND 20);
+
+-- Migración check_id (ejecuta una vez si ya tienes la BD creada):
+-- ALTER TABLE clientes ADD COLUMN check_id VARCHAR(32) NULL COMMENT 'Factura/check externo' AFTER estado;

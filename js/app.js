@@ -21,9 +21,9 @@ window.cargarEnFormulario = (c)=> {
   import('./form.js').then(m=> m.cargarEnFormulario(c, {emailList, identificacion, showVista, toast}));
 };
 window.iniciarEdicion = (id)=>{
-  const c = (window._estado?.clientes || []).find(x=>x.id===id);
-  if(!c) return;
-  window._estado.editandoId = id;
+  const c = (window._estado?.clientes || []).find(x => String(x.id) === String(id));
+  if(!c){ toast('No se encontró el cliente', 'error'); return; }
+  window._estado.editandoId = c.id;
   window.cargarEnFormulario(c);
   const btnG=document.querySelector('[data-action="guardar"]');
   if(btnG){ btnG.innerHTML='<span class="icon">💾</span>Guardar Cambios'; btnG.classList.add('accent'); }

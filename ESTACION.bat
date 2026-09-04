@@ -1,34 +1,27 @@
 @echo off
-REM ESTACION.bat - Modo aplicacion/kiosk sin tocar codigo
-REM Inicia PHP y abre la interfaz como ventana emergente tipo app (sin barra de navegador)
+REM ESTACION - Unica estacion (compartida + fallback local) - No tocar logica del proyecto
 set ROOT=%~dp0
-REM Corta la ultima \ si existe
 if "%ROOT:~-1%"=="\" set ROOT=%ROOT:~0,-1%
+set URL_COMPARTIDA=http://192.168.10.111:8000/index.html
+set URL_LOCAL=http://localhost:8000/index.html
 
-echo Iniciando estacion...
-REM Inicia servidor PHP en segundo plano en 0.0.0.0:8000
-start "ServidorPHP" /min cmd /c ""C:\xampp\php\php.exe" -S 0.0.0.0:8000 -t "%ROOT%""
-
-REM Espera 2s a que levante
-timeout /t 2 /nobreak >nul
-
-REM Intenta Chrome en modo app (ventana sin pestañas) - estilo aplicacion/tablet
-if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-  start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --app=http://localhost:8000 --window-size=1280,800 --user-data-dir="%ROOT%\.chrome-estacion"
-  goto :end
+REM Intenta conectar a la BD central (tu PC) si esta en la misma red
+ping -n 1 -w 800 192.168.10.111 >nul 2>nul
+if %errorlevel%==0 (
+  echo Conectado a estacion central 192.168.10.111 - modo compartido
+  set URL=%URL_COMPARTIDA%
+) else (
+  echo Estacion central no alcanzable - modo local
+  echo Iniciando servidor local...
+  start "ServidorPHP" /min cmd /c ""C:\xampp\php\php.exe" -S 0.0.0.0:8000 -t "%ROOT%""
+  timeout /t 2 >nul
+  set URL=%URL_LOCAL%
 )
-if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
-  start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --app=http://localhost:8000 --window-size=1280,800 --user-data-dir="%ROOT%\.chrome-estacion"
-  goto :end
-)
-REM Fallback Edge en modo app
-if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
-  start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8000 --window-size=1280,800
-  goto :end
-)
-REM Fallback navegador por defecto
-start "" http://localhost:8000
 
+REM Abre como ventana app horizontal bonita 1366x800
+if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --app=%URL% --window-size=1366,800 & goto :end
+if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --app=%URL% --window-size=1366,800 & goto :end
+if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app=%URL% --window-size=1366,800 & goto :end
+start "" %URL%
 :end
-echo Estacion lanzada. No cierres esta ventana, minimizala.
-pause
+echo Estacion abierta en %URL% - crea/actualiza/elimina y queda guardado en MySQL

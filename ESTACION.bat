@@ -2,11 +2,11 @@
 REM ESTACION - Unica estacion COMPARTIDA (todos ven la misma BD central)
 set ROOT=%~dp0
 if "%ROOT:~-1%"=="\" set ROOT=%ROOT:~0,-1%
-set URL=http://192.168.10.111:8000/index.html
+set URL=http://192.168.10.129:8000/index.html
 REM Verifica por TCP puerto 8000 (no por ping que bloquea firewall)
-powershell -NoProfile -Command "try{ $c=New-Object System.Net.Sockets.TcpClient; $c.Connect('192.168.10.111',8000); $c.Close(); exit 0 }catch{ exit 1 }" >nul 2>nul
+powershell -NoProfile -Command "try{ $c=New-Object System.Net.Sockets.TcpClient; $c.Connect('192.168.10.129',8000); $c.Close(); exit 0 }catch{ exit 1 }" >nul 2>nul
 if %errorlevel%==0 (
-  echo Conectado a estacion central 192.168.10.111 - todos ven lo mismo
+  echo Conectado a estacion central 192.168.10.129 - todos ven lo mismo
 ) else (
   echo Estacion central no responde, iniciando servidor local en esta PC...
   start "ServidorPHP" /min cmd /c ""C:\xampp\php\php.exe" -S 0.0.0.0:8000 -t "%ROOT%""
